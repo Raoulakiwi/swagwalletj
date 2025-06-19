@@ -130,7 +130,7 @@ const AuthenticationModal = ({
   wallet,
   cancelText,
   confirmText = 'Confirm',
-  title = 'Enter Password',
+  title = 'Enter PIN code', // Changed default title
   placeholder,
   getContainer,
 }: AuthenticationModalProps) => {
@@ -162,9 +162,9 @@ const AuthenticationModal = ({
     } catch (e: any) {
       form.setFields([
         {
-          name: 'password',
+          name: 'password', // Internal name remains 'password'
           errors: [
-            e?.message || t('component.AuthenticationModal.passwordError'),
+            e?.message || t('component.AuthenticationModal.pinError', 'Incorrect PIN code'),
           ],
         },
       ]);
@@ -185,9 +185,9 @@ const AuthenticationModal = ({
 
   return (
     <Popup
-      className={clsx('input-password-popup', { 'has-desc': !!description })}
+      className={clsx('input-password-popup', { 'has-desc': !!description })} // CSS class name can remain if it's generic
       visible={visible}
-      title={title}
+      title={title} // Title is now PIN-related by default or via prop
       onCancel={handleCancel}
       height={height}
       isSupportDarkMode
@@ -227,21 +227,34 @@ const AuthenticationModal = ({
       <Form onFinish={handleSubmit} form={form}>
         <AuthFormItemWrapper>
           <Form.Item
-            name="password"
+            name="password" // Internal name remains 'password'
             rules={[
               {
                 required: true,
-                message: t('component.AuthenticationModal.passwordRequired'),
+                message: t('component.AuthenticationModal.pinRequired', 'PIN code is required'),
               },
+              // Add length validation if this modal is always for PIN
+              // For now, assuming it might be used for passwords too, so not adding length restriction here
+              // but changing type to 'tel' if it's primarily for PINs now.
+              // Let's assume it should align with PIN usage:
+              {
+                len: 6, // Assuming PIN_CODE_LENGTH is 6
+                message: t('component.AuthenticationModal.pinLength', 'PIN code must be 6 digits'),
+              },
+              {
+                pattern: /^[0-9]+$/,
+                message: t('component.AuthenticationModal.pinNumeric', 'PIN code must be numeric'),
+              }
             ]}
           >
             <Input
               className="popup-input"
               placeholder={
                 placeholder ??
-                t('component.AuthenticationModal.passwordPlaceholder')
+                t('component.AuthenticationModal.pinPlaceholder', 'Enter 6-digit PIN code')
               }
-              type="password"
+              type="tel" // Changed type to 'tel' for PIN
+              maxLength={6} // Added maxLength for PIN
               size="large"
               autoFocus={!isTab}
               ref={inputRef}

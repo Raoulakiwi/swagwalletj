@@ -53,7 +53,7 @@ function ModalConfirmAllowTransfer({
   wallet,
   cancelText,
   confirmText = 'Confirm',
-  title = 'Enter Password',
+  title = 'Enter PIN to Confirm', // Changed default title
   getContainer,
 }: ConfirmAllowTransferModalProps) {
   const [visible, setVisible] = useState(false);
@@ -63,11 +63,12 @@ function ModalConfirmAllowTransfer({
 
   const [confirmToAddToWhitelist, setConfirmToAddToWhitelist] = useState(false);
 
-  const handleSubmit = async ({ password }: { password: string }) => {
+  const handleSubmit = async ({ password }: { password: string }) => { // Internal name 'password'
     try {
-      await wallet.verifyPassword(password);
+      await wallet.verifyPassword(password); // This function should now handle PIN internally
 
       if (toAddr && confirmToAddToWhitelist) {
+        // Assuming addWhitelist also uses the new PIN for any internal auth
         await wallet.addWhitelist(password, toAddr);
       }
       onFinished({
@@ -77,8 +78,8 @@ function ModalConfirmAllowTransfer({
     } catch (e: any) {
       form.setFields([
         {
-          name: 'password',
-          errors: [e?.message || t('page.sendToken.allowTransferModal.error')],
+          name: 'password', // Internal name 'password'
+          errors: [e?.message || t('page.sendToken.allowTransferModal.pinError', 'Incorrect PIN code')],
         },
       ]);
     }
@@ -106,28 +107,35 @@ function ModalConfirmAllowTransfer({
   return (
     <Popup
       visible={visible}
-      title={title}
+      title={title} // Title is now PIN-related by default or via prop
       onCancel={handleCancel}
-      height={260}
+      height={280} // Adjusted height slightly for potential new validation message display
       isSupportDarkMode
       getContainer={getContainer}
     >
       <Form onFinish={handleSubmit} form={form}>
         <FormInputItem
-          name="password"
-          // Please input password
+          name="password" // Internal name 'password'
           rules={[
             {
               required: true,
-              message: t('page.sendToken.allowTransferModal.validator__empty'),
+              message: t('page.sendToken.allowTransferModal.pinRequired', 'PIN code is required'),
             },
+            {
+              len: 6, // Assuming PIN_CODE_LENGTH is 6
+              message: t('page.sendToken.allowTransferModal.pinLength', 'PIN code must be 6 digits'),
+            },
+            {
+              pattern: /^[0-9]+$/,
+              message: t('page.sendToken.allowTransferModal.pinNumeric', 'PIN code must be numeric'),
+            }
           ]}
         >
           <Input
             className="popup-input"
-            // Enter the Password to Confirm
-            placeholder={t('page.sendToken.allowTransferModal.placeholder')}
-            type="password"
+            placeholder={t('page.sendToken.allowTransferModal.pinPlaceholder', 'Enter 6-digit PIN')}
+            type="tel" // Changed to tel
+            maxLength={6} // Added maxLength
             size="large"
             autoFocus={!getContainer}
             ref={inputRef}

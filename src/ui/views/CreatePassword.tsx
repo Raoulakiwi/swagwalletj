@@ -11,7 +11,7 @@ import ReactMarkdown from 'react-markdown';
 import TermOfUse from '@/constant/term-of-use.md';
 import remarkGfm from 'remark-gfm';
 
-const MINIMUM_PASSWORD_LENGTH = 8;
+const PIN_CODE_LENGTH = 6;
 
 const CreatePassword = () => {
   const history = useHistory();
@@ -28,8 +28,8 @@ const CreatePassword = () => {
     onError(err) {
       form.setFields([
         {
-          name: 'password',
-          errors: [err?.message || t('incorrect password')],
+          name: 'password', // Internal name, kept as 'password'
+          errors: [err?.message || t('incorrect PIN code')],
         },
       ]);
     },
@@ -53,11 +53,19 @@ const CreatePassword = () => {
   const [visible, toggleVisible] = useToggle(false);
 
   const isInvalidForm = useCallback(
-    () =>
-      form.getFieldsError().some((e) => e.errors.length > 0) ||
-      !form.getFieldValue('password') ||
-      form.getFieldValue('password')?.length < 8 ||
-      form.getFieldValue('password') !== form.getFieldValue('confirmPassword'),
+    () => {
+      const passwordValue = form.getFieldValue('password');
+      const confirmPasswordValue = form.getFieldValue('confirmPassword');
+      const errors = form.getFieldsError();
+
+      return (
+        errors.some((e) => e.errors.length > 0) ||
+        !passwordValue ||
+        passwordValue.length !== PIN_CODE_LENGTH ||
+        !/^[0-9]*$/.test(passwordValue) || // Check if numeric, allows empty initially
+        passwordValue !== confirmPasswordValue
+      );
+    },
     [form]
   );
 
@@ -134,10 +142,10 @@ const CreatePassword = () => {
               src={UnlockLogo}
             />
             <p className="text-24 mb-8 mt-0 text-r-neutral-title2 text-center font-bold">
-              {t('page.createPassword.title')}
+              {t('page.createPin.title', 'Create new PIN code')}
             </p>
             <p className="text-13 mb-0 text-r-neutral-title2 opacity-80 text-center">
-              It will be used to unlock your wallet and encrypt local data
+              {t('page.createPin.description', 'It will be used to unlock your wallet and encrypt local data')}
             </p>
             <img src="/images/create-password-mask.png" className="mask" />
           </header>
@@ -149,21 +157,26 @@ const CreatePassword = () => {
               rules={[
                 {
                   required: true,
-                  message: t('page.createPassword.passwordRequired'),
+                  message: t('page.createPin.pinRequired', 'PIN code is required'),
                 },
                 {
-                  min: MINIMUM_PASSWORD_LENGTH,
-                  message: t('page.createPassword.passwordMin'),
+                  len: PIN_CODE_LENGTH,
+                  message: t('page.createPin.pinLength', `PIN code must be ${PIN_CODE_LENGTH} digits`),
                 },
+                {
+                  pattern: /^[0-9]+$/,
+                  message: t('page.createPin.pinNumeric', 'PIN code must be numeric'),
+                }
               ]}
             >
               <Input
                 className={'h-[52px]'}
                 size="large"
-                placeholder={t('page.createPassword.passwordPlaceholder')}
-                type="password"
+                placeholder={t('page.createPin.pinPlaceholder', 'Enter 6-digit PIN code')}
+                type="tel"
                 autoFocus
                 spellCheck={false}
+                maxLength={PIN_CODE_LENGTH}
               />
             </Form.Item>
             <Form.Item
@@ -173,7 +186,15 @@ const CreatePassword = () => {
               rules={[
                 {
                   required: true,
-                  message: t('page.createPassword.confirmRequired'),
+                  message: t('page.createPin.confirmPinRequired', 'Confirm PIN code is required'),
+                },
+                {
+                  len: PIN_CODE_LENGTH,
+                  message: t('page.createPin.pinLength', `PIN code must be ${PIN_CODE_LENGTH} digits`),
+                },
+                {
+                  pattern: /^[0-9]+$/,
+                  message: t('page.createPin.pinNumeric', 'PIN code must be numeric'),
                 },
                 ({ getFieldValue }) => ({
                   validator(_, value: string) {
@@ -181,7 +202,7 @@ const CreatePassword = () => {
                       return Promise.resolve();
                     }
                     return Promise.reject(
-                      new Error(t('page.createPassword.confirmError'))
+                      new Error(t('page.createPin.confirmPinError', 'The two PIN codes that you entered do not match!'))
                     );
                   },
                 }),
@@ -190,8 +211,9 @@ const CreatePassword = () => {
               <Input
                 className="h-[52px]"
                 size="large"
-                placeholder={t('page.createPassword.confirmPlaceholder')}
-                type="password"
+                placeholder={t('page.createPin.confirmPinPlaceholder', 'Confirm 6-digit PIN code')}
+                type="tel"
+                maxLength={PIN_CODE_LENGTH}
                 spellCheck={false}
               />
             </Form.Item>

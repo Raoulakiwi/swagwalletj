@@ -11,7 +11,7 @@ import { ReactComponent as RcIconCheckCC } from 'ui/assets/IconCheckedSquare.svg
 import { ReactComponent as RcIconSuccessCC } from 'ui/assets/icon-checked-success-cc.svg';
 import { ReactComponent as RcIconUnCheckCC } from 'ui/assets/IconUncheckSquare.svg';
 
-const MINIMUM_PASSWORD_LENGTH = 8;
+const PIN_CODE_LENGTH = 6; // Changed from MINIMUM_PASSWORD_LENGTH
 
 const Container = styled.div`
   .ant-form-item-label {
@@ -149,39 +149,50 @@ export const PasswordCard: React.FC<Props> = ({ onSubmit, step, onBack }) => {
           <div className="flex-1 mt-[18px]">
             <hgroup className="mb-[24px]">
               <h1 className="text-r-neutral-title1 text-center font-semibold text-[28px] leading-[29px] mb-[9px]">
-                {t('page.newUserImport.PasswordCard.title')}
+                {t('page.newUserImport.PinCard.title', 'Create New PIN Code')}
               </h1>
               <p className="text-center text-rabby-blue-default font-normal text-[16px] leading-[20px] mx-28">
-                {t('page.newUserImport.PasswordCard.desc')}
+                {t('page.newUserImport.PinCard.desc', 'This PIN code will be used to unlock your wallet.')}
               </p>
             </hgroup>
 
             <Form.Item
-              name="password"
+              name="password" // Internal name stays 'password'
               validateTrigger={['onChange', 'onSubmit']}
               label={''}
               rules={[
                 {
                   required: true,
                   message: t(
-                    'page.newUserImport.PasswordCard.form.password.required'
+                    'page.newUserImport.PinCard.form.pin.required',
+                    'PIN code is required'
                   ),
                 },
                 {
-                  min: MINIMUM_PASSWORD_LENGTH,
+                  len: PIN_CODE_LENGTH, // Use len for exact length
                   message: t(
-                    'page.newUserImport.PasswordCard.form.password.min'
+                    'page.newUserImport.PinCard.form.pin.length',
+                    `PIN code must be ${PIN_CODE_LENGTH} digits`
                   ),
                 },
+                {
+                  pattern: /^[0-9]+$/,
+                  message: t(
+                    'page.newUserImport.PinCard.form.pin.numeric',
+                    'PIN code must be numeric'
+                  ),
+                }
               ]}
             >
               <Input
                 size="large"
                 placeholder={t(
-                  'page.newUserImport.PasswordCard.form.password.placeholder'
+                  'page.newUserImport.PinCard.form.pin.placeholder',
+                  'Enter 6-digit PIN code'
                 )}
                 className="text-[24px]"
-                type="password"
+                type="tel" // Changed to tel
+                maxLength={PIN_CODE_LENGTH} // Added maxLength
                 autoFocus
                 spellCheck={false}
                 suffix={
@@ -192,7 +203,7 @@ export const PasswordCard: React.FC<Props> = ({ onSubmit, step, onBack }) => {
               />
             </Form.Item>
             <Form.Item
-              name="confirmPassword"
+              name="confirmPassword" // Internal name stays 'confirmPassword'
               validateTrigger={['onChange', 'onSubmit']}
               label={''}
               dependencies={['password']}
@@ -200,7 +211,22 @@ export const PasswordCard: React.FC<Props> = ({ onSubmit, step, onBack }) => {
                 {
                   required: true,
                   message: t(
-                    'page.newUserImport.PasswordCard.form.confirmPassword.required'
+                    'page.newUserImport.PinCard.form.confirmPin.required',
+                    'Confirm PIN code is required'
+                  ),
+                },
+                {
+                  len: PIN_CODE_LENGTH, // Use len for exact length
+                  message: t(
+                    'page.newUserImport.PinCard.form.pin.length', // Re-use pin length message
+                    `PIN code must be ${PIN_CODE_LENGTH} digits`
+                  ),
+                },
+                {
+                  pattern: /^[0-9]+$/,
+                  message: t(
+                    'page.newUserImport.PinCard.form.pin.numeric', // Re-use pin numeric message
+                    'PIN code must be numeric'
                   ),
                 },
                 ({ getFieldValue }) => ({
@@ -211,7 +237,8 @@ export const PasswordCard: React.FC<Props> = ({ onSubmit, step, onBack }) => {
                     return Promise.reject(
                       new Error(
                         t(
-                          'page.newUserImport.PasswordCard.form.confirmPassword.notMatch'
+                          'page.newUserImport.PinCard.form.confirmPin.notMatch',
+                          'The two PIN codes that you entered do not match!'
                         )
                       )
                     );
@@ -222,10 +249,12 @@ export const PasswordCard: React.FC<Props> = ({ onSubmit, step, onBack }) => {
               <Input
                 size="large"
                 placeholder={t(
-                  'page.newUserImport.PasswordCard.form.confirmPassword.placeholder'
+                  'page.newUserImport.PinCard.form.confirmPin.placeholder',
+                  'Confirm 6-digit PIN code'
                 )}
                 className="text-[24px]"
-                type="password"
+                type="tel" // Changed to tel
+                maxLength={PIN_CODE_LENGTH} // Added maxLength
                 spellCheck={false}
                 suffix={
                   <span className="text-r-green-default">
@@ -237,12 +266,19 @@ export const PasswordCard: React.FC<Props> = ({ onSubmit, step, onBack }) => {
           </div>
           <Form.Item shouldUpdate noStyle>
             {(form) => {
+              const passwordValue = form.getFieldValue('password');
+              const confirmPasswordValue = form.getFieldValue('confirmPassword');
+              const errors = form.getFieldsError();
               const isDisabled =
-                !form.getFieldValue('confirmPassword') ||
-                form.isFieldsValidating([['password'], ['confirmPassword']]) ||
-                sum(form.getFieldsError().map((item) => item.errors.length)) >
-                  0 ||
-                !form.isFieldsTouched();
+                !passwordValue ||
+                passwordValue.length !== PIN_CODE_LENGTH ||
+                !/^[0-9]*$/.test(passwordValue) ||
+                !confirmPasswordValue ||
+                confirmPasswordValue.length !== PIN_CODE_LENGTH ||
+                !/^[0-9]*$/.test(confirmPasswordValue) ||
+                passwordValue !== confirmPasswordValue ||
+                errors.some(field => field.errors.length > 0) ||
+                !form.isFieldsTouched(true); // Check if any field is touched
               return (
                 <footer className="mt-auto">
                   <div
@@ -263,7 +299,7 @@ export const PasswordCard: React.FC<Props> = ({ onSubmit, step, onBack }) => {
                     <div className="text-[13px] text-r-neutral-body leading-[16px]">
                       <Trans
                         t={t}
-                        i18nKey="page.newUserImport.PasswordCard.agree"
+                        i18nKey="page.newUserImport.PinCard.agree" // Updated i18n key
                       >
                         I agree to the{' '}
                         <span

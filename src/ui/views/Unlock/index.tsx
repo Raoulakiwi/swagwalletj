@@ -69,12 +69,12 @@ const Unlock = () => {
     },
     onError(err) {
       console.log('error', err);
-      setInputError(err?.message || t('page.unlock.password.error'));
-      form.validateFields(['password']);
+      setInputError(err?.message || t('page.unlock.pin.error', 'Incorrect PIN code'));
+      form.validateFields(['password']); // Internal field name remains 'password'
     },
   });
 
-  const handleSubmit = async ({ password }: { password: string }) => {
+  const handleSubmit = async ({ password }: { password: string }) => { // Internal variable name remains 'password'
     if (isUnlockingRef.current) return;
     isUnlockingRef.current = true;
     await run(password);
@@ -121,11 +121,11 @@ const Unlock = () => {
         <Form autoComplete="off" form={form} onFinish={handleSubmit}>
           <InputFormStyled
             className="mt-[34px] mx-20"
-            name="password"
+            name="password" // Internal field name remains 'password'
             rules={[
               {
                 required: true,
-                message: t('page.unlock.password.required'),
+                message: t('page.unlock.pin.required', 'PIN code is required'),
               },
               {
                 validator: (_, value) => {
@@ -144,7 +144,7 @@ const Unlock = () => {
                               openInternalPageInTab('forgot-password')
                             }
                           >
-                            {t('page.unlock.btnForgotPassword')}
+                            {t('page.unlock.btnForgotPin', 'Forgot PIN?')}
                           </button>
                         )}
                       </div>
@@ -156,7 +156,7 @@ const Unlock = () => {
             ]}
           >
             <Input
-              placeholder={t('page.unlock.password.placeholder')}
+              placeholder={t('page.unlock.pin.placeholder', 'Enter 6-digit PIN code')}
               className={clsx(
                 'bg-r-neutral-card1 hover:border-rabby-blue-default focus:border-rabby-blue-default placeholder-r-neutral-foot',
                 'h-[56px]',
@@ -164,7 +164,8 @@ const Unlock = () => {
                 'rounded-[8px]'
               )}
               size="large"
-              type="password"
+              type="tel"
+              maxLength={6}
               ref={inputEl}
               spellCheck={false}
               onChange={() => {
@@ -199,7 +200,7 @@ const Unlock = () => {
                 )}
                 onClick={() => openInternalPageInTab('forgot-password')}
               >
-                {t('page.unlock.btnForgotPassword')}
+                {t('page.unlock.btnForgotPin', 'Forgot PIN?')}
               </button>
             )}
           </footer>
