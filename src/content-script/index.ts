@@ -89,6 +89,7 @@ const onMessageSetUpExtensionStreams = (msg) => {
 };
 browser.runtime.onMessage.addListener(onMessageSetUpExtensionStreams);
 
-if (!isManifestV3) {
-  injectProviderScript(false);
-}
+// Always inject the provider script, regardless of manifest version.
+// The original condition was `if (!isManifestV3)`.
+// This was preventing injection in MV3 environments like Edge/Chrome.
+injectProviderScript(false);
