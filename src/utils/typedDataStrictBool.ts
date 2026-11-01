@@ -22,14 +22,23 @@ const fail = (path: string, value: unknown): never => {
 
 function checkValue(types: Types, type: string, value: unknown, path: string, depth: number) {
   if (depth > 64) throw new TypedDataBoolError('typed data is nested too deeply');
-  const arr = /^(.*)\[(\d*)\]$/.exec(type);
-  if (arr) {
+  // eth-sig-util treats ANY type ending in ']' as an array whose element type is everything
+  // before the last '['. Only accept the well-formed `T[]` / `T[n]` forms; anything else
+  // ('bool[1 ]', 'bool[x]', 'bool[]]', 'bool[-1]', ...) is refused before signing (BI-SW1-01).
+  if (type.endsWith(']')) {
+    const arr = /^([^\[\]]+(?:\[\d*\])*)\[(\d*)\]$/.exec(type);
+    if (!arr) throw new TypedDataBoolError(`typed data field "${path}" has a malformed array type`);
+    if (arr[1] !== type.slice(0, type.lastIndexOf('['))) {
+      throw new TypedDataBoolError(`typed data field "${path}" has a malformed array type`);
+    }
     if (value === undefined || value === null) return; // eth-sig-util rejects/handles missing arrays itself
     if (!Array.isArray(value)) {
       // only care when the element type contains a bool somewhere
       if (containsBool(types, arr[1], new Set())) fail(path, value);
       return;
     }
+    // Array-likes / plain objects ({"0":"false"}) are not arrays: refused above when the element
+    // type can hold a bool. Only real arrays are walked, element by element.
     value.forEach((v, i) => checkValue(types, arr[1], v, `${path}[${i}]`, depth + 1));
     return;
   }
@@ -86,4 +95,13 @@ export function assertTypedDataV1BoolsStrict(data: unknown): void {
       checkValue({}, String(item.type), item.value, `[${i}].${item.name}`, 0);
     }
   });
+}
+
+/**
+ * Single choke point used right before ANY typed-data signature (keyringService.signTypedMessage),
+ * so UI-initiated paths (wallet.signTypedData / signTypedDataWithUI) cannot skip the check.
+ */
+export function assertTypedDataForSigning(data: unknown, version: unknown): void {
+  if (version === 'V1' || version === undefined) assertTypedDataV1BoolsStrict(data);
+  else assertTypedDataBoolsStrict(data);
 }
