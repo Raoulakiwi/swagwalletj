@@ -72,6 +72,11 @@ import { getOriginFromUrl } from '@/utils';
 import { stringToHex } from 'viem';
 import { ProviderRequest } from './type';
 import { assertProviderRequest } from '@/background/utils/assertProviderRequest';
+import {
+  assertTypedDataBoolsStrict,
+  assertTypedDataV1BoolsStrict,
+  TypedDataBoolError,
+} from '@/utils/typedDataStrictBool';
 
 const reportSignText = (params: {
   method: string;
@@ -111,15 +116,31 @@ interface Web3WalletPermission {
   date?: number;
 }
 
+/**
+ * EIP-712 bool fields must be real booleans: eth-sig-util signs the string
+ * "false" as true while the approval UI shows "false" (vuln scan, Nov 2026).
+ */
+const rejectNonBooleanBools = (check: () => void) => {
+  try {
+    check();
+  } catch (e) {
+    if (e instanceof TypedDataBoolError) {
+      throw ethErrors.rpc.invalidParams(e.message);
+    }
+    throw e;
+  }
+};
+
 const v1SignTypedDataVlidation = ({
   data: {
-    params: [_, from],
+    params: [typedDataV1, from],
   },
   account,
 }: ProviderRequest) => {
   const currentAddress = account?.address?.toLowerCase();
   if (from.toLowerCase() !== currentAddress)
     throw ethErrors.rpc.invalidParams('from should be same as current address');
+  rejectNonBooleanBools(() => assertTypedDataV1BoolsStrict(typedDataV1));
 };
 
 const signTypedDataVlidation = ({
@@ -135,6 +156,7 @@ const signTypedDataVlidation = ({
   } catch (e) {
     throw ethErrors.rpc.invalidParams('data is not a validate JSON string');
   }
+  rejectNonBooleanBools(() => assertTypedDataBoolsStrict(jsonData));
   const currentChain = permissionService.isInternalOrigin(session!.origin)
     ? findChain({ id: jsonData.domain.chainId })?.enum
     : permissionService.getConnectedSite(session!.origin)?.chain;
@@ -910,6 +932,12 @@ class ProviderController extends BaseController {
         _data = JSON.parse(data);
       }
     }
+    // Re-check right before signing (also covers callers that skip the approval validator).
+    rejectNonBooleanBools(() =>
+      version === 'V1'
+        ? assertTypedDataV1BoolsStrict(_data)
+        : assertTypedDataBoolsStrict(_data)
+    );
 
     return keyringService.signTypedMessage(
       keyring,

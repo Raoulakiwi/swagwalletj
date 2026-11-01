@@ -52,6 +52,7 @@ import {
 } from 'background/utils/password';
 import uninstalledMetricService from '../uninstalled';
 import { isEmpty } from 'lodash';
+import { assertTypedDataForSigning } from '@/utils/typedDataStrictBool';
 
 const UNENCRYPTED_IGNORE_KEYRING = [
   KEYRING_TYPE.SimpleKeyring,
@@ -736,6 +737,9 @@ export class KeyringService extends EventEmitter {
    * @returns {Promise<Buffer>} The raw signature.
    */
   signTypedMessage(keyring, msgParams, opts = { version: 'V1' }) {
+    // Strict-bool guard for every typed-data signature, including UI paths that bypass the
+    // provider controller (wallet.signTypedData). Throws TypedDataBoolError.
+    assertTypedDataForSigning(msgParams.data, (opts as any)?.version ?? 'V1');
     const address = normalizeAddress(msgParams.from);
     return keyring.signTypedData(address, msgParams.data, opts);
   }
