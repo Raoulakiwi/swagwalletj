@@ -13,3 +13,6 @@ tmp/styled-components-id-mappings.*
 flake.nix
 flake.lock
 .envrc
+
+# Claude factory verification output (uploaded as CI artifacts)
+factory-proof/
